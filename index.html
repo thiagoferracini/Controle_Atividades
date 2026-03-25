@@ -3,122 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Atividades</title>
+    <title>Gestão Master Ailog</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-50 min-h-screen p-4 md:p-10 text-slate-800">
-
-    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-        <div class="bg-indigo-700 p-6 text-white text-center">
-            <h1 class="text-3xl font-bold tracking-tight">Gestão de Atividades</h1>
-            <p class="opacity-80 mt-1">Controle de prazos e entregas</p>
+<body class="bg-slate-100 min-h-screen p-4">
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl overflow-hidden">
+        <div class="bg-slate-800 p-6 text-white flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">Painel de Controle de Entregas</h1>
+                <p class="text-slate-400 text-sm">Foco em ISO 9001 & Produtividade</p>
+            </div>
+            <div id="stats" class="text-right text-xs font-mono"></div>
         </div>
 
-        <div class="p-6 md:p-8">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-8 bg-slate-100 p-4 rounded-lg">
-                <input type="text" id="taskInput" placeholder="Nova atividade..." class="md:col-span-2 p-2.5 rounded-md border border-slate-300 outline-none focus:ring-2 focus:ring-indigo-500">
-                <input type="date" id="deadlineInput" class="p-2.5 rounded-md border border-slate-300 outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-                <button onclick="salvarTarefa()" id="btnSalvar" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-md transition duration-200">Adicionar</button>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8 bg-slate-50 p-5 rounded-lg border border-slate-200">
+                <input type="text" id="taskInput" placeholder="Atividade..." class="md:col-span-2 p-2 border rounded">
+                <input type="date" id="deadlineInput" class="p-2 border rounded">
+                
+                <select id="catInput" class="p-2 border rounded">
+                    <option value="Ailog">🏢 Ailog / Qualidade</option>
+                    <option value="ISO/LGPD">📜 ISO 9001 / LGPD</option>
+                    <option value="Projetos">🚀 Projetos (Veloe/Alelo)</option>
+                    <option value="Pessoal">🏠 Pessoal / Estácio</option>
+                </select>
+
+                <select id="prioInput" class="p-2 border rounded">
+                    <option value="Baixa">🔵 Baixa</option>
+                    <option value="Média" selected>🟡 Média</option>
+                    <option value="Alta">🔴 Alta / Crítica</option>
+                </select>
+
+                <input type="text" id="linkInput" placeholder="Link/Obs (opcional)" class="p-2 border rounded">
+                
+                <button onclick="salvarTarefa()" id="btnSalvar" class="md:col-span-3 bg-slate-800 text-white font-bold py-3 rounded hover:bg-black transition">CADASTRAR ATIVIDADE</button>
             </div>
 
-            <div class="flex flex-wrap gap-2 mb-6 justify-center md:justify-start">
-                <button onclick="renderizar('todos')" class="px-4 py-1.5 rounded-full text-sm bg-slate-200 hover:bg-slate-300 transition">Todas</button>
-                <button onclick="renderizar('atrasados')" class="px-4 py-1.5 rounded-full text-sm bg-red-100 text-red-700 font-semibold hover:bg-red-200 transition">⚠️ Atrasados</button>
-                <button onclick="renderizar('concluidos')" class="px-4 py-1.5 rounded-full text-sm bg-emerald-100 text-emerald-700 font-semibold hover:bg-emerald-200 transition">✅ Concluídos</button>
+            <div class="flex flex-wrap gap-2 mb-6 border-b pb-4">
+                <button onclick="renderizar('todos')" class="bg-slate-200 px-4 py-1 rounded-full text-sm">Todas</button>
+                <button onclick="renderizar('atrasados')" class="bg-red-100 text-red-700 px-4 py-1 rounded-full text-sm font-bold">Atrasadas</button>
+                <button onclick="renderizar('Alta')" class="bg-orange-100 text-orange-700 px-4 py-1 rounded-full text-sm font-bold text-orange-700">Prioridade Alta</button>
             </div>
 
-            <div id="lista" class="space-y-4">
-                <p class="text-center text-slate-400 animate-pulse">Carregando dados da planilha...</p>
-            </div>
+            <div id="lista" class="space-y-3 text-sm">
+                </div>
         </div>
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOvgM6b8j7zq72nim0sXD7iYkIjFhXpgfNdi2G_qQL_YAzsur8TYQ5q8pZ9SNDiFAh/exec'; // <--- COLE SUA URL AQUI
+        const SCRIPT_URL = 'Uhttps://script.google.com/macros/s/AKfycbxOvgM6b8j7zq72nim0sXD7iYkIjFhXpgfNdi2G_qQL_YAzsur8TYQ5q8pZ9SNDiFAh/exec';
         let tarefas = [];
 
         async function buscarDados() {
-            try {
-                const response = await fetch(`${SCRIPT_URL}?action=listar`);
-                tarefas = await response.json();
-                renderizar('todos');
-            } catch (error) {
-                console.error("Erro ao buscar:", error);
-                document.getElementById('lista').innerHTML = "Erro ao conectar com o Google Sheets.";
-            }
+            const res = await fetch(`${SCRIPT_URL}?action=listar`);
+            tarefas = await res.json();
+            renderizar('todos');
         }
 
         async function salvarTarefa() {
-            const atividade = document.getElementById('taskInput').value;
-            const prazo = document.getElementById('deadlineInput').value;
-            if(!atividade || !prazo) return alert("Preencha todos os campos!");
+            const btn = document.getElementById('btnSalvar');
+            const data = {
+                action: 'adicionar',
+                atividade: document.getElementById('taskInput').value,
+                prazo: document.getElementById('deadlineInput').value,
+                categoria: document.getElementById('catInput').value,
+                prioridade: document.getElementById('prioInput').value,
+                link: document.getElementById('linkInput').value
+            };
 
-            document.getElementById('btnSalvar').disabled = true;
-            document.getElementById('btnSalvar').innerText = "...";
+            if(!data.atividade || !data.prazo) return alert("Erro: Atividade e Prazo são obrigatórios.");
 
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'adicionar', atividade, prazo })
-            });
-
-            document.getElementById('taskInput').value = "";
-            document.getElementById('btnSalvar').disabled = false;
-            document.getElementById('btnSalvar').innerText = "Adicionar";
+            btn.disabled = true; btn.innerText = "Gravando...";
+            await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data) });
+            
+            // Limpar e recarregar
+            ['taskInput','deadlineInput','linkInput'].forEach(id => document.getElementById(id).value = "");
+            btn.disabled = false; btn.innerText = "CADASTRAR ATIVIDADE";
             buscarDados();
         }
 
-        async function concluirTarefa(id) {
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'concluir', id })
-            });
+        async function concluir(id) {
+            await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({action: 'concluir', id}) });
             buscarDados();
-        }
-
-        function calcularAtraso(prazo) {
-            const hoje = new Date();
-            hoje.setHours(0, 0, 0, 0);
-            const dataPrazo = new Date(prazo);
-            dataPrazo.setDate(dataPrazo.getDate() + 1); // Ajuste de fuso horário local
-
-            if (dataPrazo < hoje) {
-                const diff = Math.ceil(Math.abs(hoje - dataPrazo) / (1000 * 60 * 60 * 24));
-                return `<span class="text-red-600 font-bold ml-2 underline decoration-red-300 italic">(${diff} dias de atraso)</span>`;
-            }
-            return "";
         }
 
         function renderizar(filtro) {
             const lista = document.getElementById('lista');
             lista.innerHTML = "";
-            const hoje = new Date();
-            hoje.setHours(0, 0, 0, 0);
+            const hoje = new Date(); hoje.setHours(0,0,0,0);
 
             const filtradas = tarefas.filter(t => {
-                const dataP = new Date(t.prazo);
-                dataP.setDate(dataP.getDate() + 1);
-                if (filtro === 'atrasados') return dataP < hoje && t.status !== 'Concluído';
-                if (filtro === 'concluidos') return t.status === 'Concluído';
+                const p = new Date(t.prazo); p.setDate(p.getDate() + 1);
+                if (filtro === 'atrasados') return p < hoje && t.status !== 'Concluído';
+                if (filtro === 'Alta') return t.prioridade === 'Alta' && t.status !== 'Concluído';
+                if (filtro === 'todos') return true;
                 return true;
             });
 
             filtradas.forEach(t => {
-                const isConcluida = t.status === 'Concluído';
-                const atrasoMsg = !isConcluida ? calcularAtraso(t.prazo) : "";
-                
+                const p = new Date(t.prazo); p.setDate(p.getDate() + 1);
+                const isAtrasado = p < hoje && t.status !== 'Concluído';
+                const corPrio = t.prioridade === 'Alta' ? 'border-l-4 border-l-red-500' : (t.prioridade === 'Média' ? 'border-l-4 border-l-yellow-400' : 'border-l-4 border-l-blue-400');
+
                 lista.innerHTML += `
-                    <div class="flex items-center justify-between p-4 border rounded-xl transition hover:shadow-md ${isConcluida ? 'bg-slate-50 opacity-60' : 'bg-white'}">
+                    <div class="flex items-center justify-between p-4 border rounded-lg bg-white shadow-sm ${corPrio} ${t.status === 'Concluído' ? 'opacity-50' : ''}">
                         <div class="flex-1">
-                            <h3 class="font-bold text-lg ${isConcluida ? 'line-through text-slate-400' : 'text-slate-800'}">${t.atividade}</h3>
-                            <p class="text-sm text-slate-500">Prazo: ${new Date(t.prazo).toLocaleDateString('pt-BR')} ${atrasoMsg}</p>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] uppercase font-bold px-2 py-0.5 bg-slate-100 rounded text-slate-600">${t.categoria}</span>
+                                <h4 class="font-bold ${t.status === 'Concluído' ? 'line-through text-slate-400' : 'text-slate-800'}">${t.atividade}</h4>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-1">
+                                Prazo: ${p.toLocaleDateString()} 
+                                ${isAtrasado ? `<span class="text-red-600 font-bold underline ml-2">ATRASADO</span>` : ''}
+                                ${t.link ? ` | <a href="${t.link}" target="_blank" class="text-blue-500 underline">Ver Link</a>` : ''}
+                            </p>
                         </div>
-                        ${!isConcluida ? `<button onclick="concluirTarefa(${t.id})" class="ml-4 bg-emerald-500 text-white p-2 rounded-lg hover:bg-emerald-600 transition">✓</button>` : '⭐'}
+                        ${t.status !== 'Concluído' ? `<button onclick="concluir(${t.id})" class="bg-slate-800 text-white p-2 rounded hover:bg-emerald-600 transition">✓</button>` : '✅'}
                     </div>
                 `;
             });
         }
 
-        // Início automático
         buscarDados();
     </script>
 </body>
