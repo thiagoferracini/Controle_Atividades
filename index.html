@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Atividades</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 md:p-10 text-slate-800">
+
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+        <div class="bg-indigo-700 p-6 text-white text-center">
+            <h1 class="text-3xl font-bold tracking-tight">Gestão de Atividades</h1>
+            <p class="opacity-80 mt-1">Controle de prazos e entregas</p>
+        </div>
+
+        <div class="p-6 md:p-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-8 bg-slate-100 p-4 rounded-lg">
+                <input type="text" id="taskInput" placeholder="Nova atividade..." class="md:col-span-2 p-2.5 rounded-md border border-slate-300 outline-none focus:ring-2 focus:ring-indigo-500">
+                <input type="date" id="deadlineInput" class="p-2.5 rounded-md border border-slate-300 outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                <button onclick="salvarTarefa()" id="btnSalvar" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-md transition duration-200">Adicionar</button>
+            </div>
+
+            <div class="flex flex-wrap gap-2 mb-6 justify-center md:justify-start">
+                <button onclick="renderizar('todos')" class="px-4 py-1.5 rounded-full text-sm bg-slate-200 hover:bg-slate-300 transition">Todas</button>
+                <button onclick="renderizar('atrasados')" class="px-4 py-1.5 rounded-full text-sm bg-red-100 text-red-700 font-semibold hover:bg-red-200 transition">⚠️ Atrasados</button>
+                <button onclick="renderizar('concluidos')" class="px-4 py-1.5 rounded-full text-sm bg-emerald-100 text-emerald-700 font-semibold hover:bg-emerald-200 transition">✅ Concluídos</button>
+            </div>
+
+            <div id="lista" class="space-y-4">
+                <p class="text-center text-slate-400 animate-pulse">Carregando dados da planilha...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOvgM6b8j7zq72nim0sXD7iYkIjFhXpgfNdi2G_qQL_YAzsur8TYQ5q8pZ9SNDiFAh/exec'; // <--- COLE SUA URL AQUI
+        let tarefas = [];
+
+        async function buscarDados() {
+            try {
+                const response = await fetch(`${SCRIPT_URL}?action=listar`);
+                tarefas = await response.json();
+                renderizar('todos');
+            } catch (error) {
+                console.error("Erro ao buscar:", error);
+                document.getElementById('lista').innerHTML = "Erro ao conectar com o Google Sheets.";
+            }
+        }
+
+        async function salvarTarefa() {
+            const atividade = document.getElementById('taskInput').value;
+            const prazo = document.getElementById('deadlineInput').value;
+            if(!atividade || !prazo) return alert("Preencha todos os campos!");
+
+            document.getElementById('btnSalvar').disabled = true;
+            document.getElementById('btnSalvar').innerText = "...";
+
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'adicionar', atividade, prazo })
+            });
+
+            document.getElementById('taskInput').value = "";
+            document.getElementById('btnSalvar').disabled = false;
+            document.getElementById('btnSalvar').innerText = "Adicionar";
+            buscarDados();
+        }
+
+        async function concluirTarefa(id) {
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'concluir', id })
+            });
+            buscarDados();
+        }
+
+        function calcularAtraso(prazo) {
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            const dataPrazo = new Date(prazo);
+            dataPrazo.setDate(dataPrazo.getDate() + 1); // Ajuste de fuso horário local
+
+            if (dataPrazo < hoje) {
+                const diff = Math.ceil(Math.abs(hoje - dataPrazo) / (1000 * 60 * 60 * 24));
+                return `<span class="text-red-600 font-bold ml-2 underline decoration-red-300 italic">(${diff} dias de atraso)</span>`;
+            }
+            return "";
+        }
+
+        function renderizar(filtro) {
+            const lista = document.getElementById('lista');
+            lista.innerHTML = "";
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+
+            const filtradas = tarefas.filter(t => {
+                const dataP = new Date(t.prazo);
+                dataP.setDate(dataP.getDate() + 1);
+                if (filtro === 'atrasados') return dataP < hoje && t.status !== 'Concluído';
+                if (filtro === 'concluidos') return t.status === 'Concluído';
+                return true;
+            });
+
+            filtradas.forEach(t => {
+                const isConcluida = t.status === 'Concluído';
+                const atrasoMsg = !isConcluida ? calcularAtraso(t.prazo) : "";
+                
+                lista.innerHTML += `
+                    <div class="flex items-center justify-between p-4 border rounded-xl transition hover:shadow-md ${isConcluida ? 'bg-slate-50 opacity-60' : 'bg-white'}">
+                        <div class="flex-1">
+                            <h3 class="font-bold text-lg ${isConcluida ? 'line-through text-slate-400' : 'text-slate-800'}">${t.atividade}</h3>
+                            <p class="text-sm text-slate-500">Prazo: ${new Date(t.prazo).toLocaleDateString('pt-BR')} ${atrasoMsg}</p>
+                        </div>
+                        ${!isConcluida ? `<button onclick="concluirTarefa(${t.id})" class="ml-4 bg-emerald-500 text-white p-2 rounded-lg hover:bg-emerald-600 transition">✓</button>` : '⭐'}
+                    </div>
+                `;
+            });
+        }
+
+        // Início automático
+        buscarDados();
+    </script>
+</body>
+</html>
